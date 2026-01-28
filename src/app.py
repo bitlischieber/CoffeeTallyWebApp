@@ -34,6 +34,9 @@ def route_index():
         return redirect('/data')
     return redirect('/login')
 
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon.ico')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -122,7 +125,7 @@ def update_credit():
             'updated_at': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         }
         update_user_data(username, update_data)
-        return '<div class="alert alert-success">Credit updated successfully</div>'
+        return '<div class="alert alert-success">Credit updated successfully</div>', 200
     except Exception as e:
         return f'<div class="alert alert-danger">Error: {str(e)}</div>', 500
 
@@ -130,7 +133,8 @@ def update_credit():
 @app.route('/change-password', methods=['POST'])
 def change_password_handler():
     """HTMX endpoint - changes password and returns status message"""
-    token = session.get('token')
+    token = session.get('token')    
+    
     if not token:
         return '<div class="alert alert-danger">Unauthorized</div>', 401
     
@@ -145,14 +149,14 @@ def change_password_handler():
     if not current_password or not new_password or not confirm_password:
         return '<div class="alert alert-danger">All fields are required</div>', 400
     
-    if new_password != confirm_password:
-        return '<div class="alert alert-danger">New passwords do not match</div>', 400
+    if new_password != confirm_password or len(new_password) < 5:
+        return '<div class="alert alert-danger">New passwords do not match or is too short (at least 5 characters)</div>', 400
     
     try:
         old_hash = hashlib.sha256(current_password.encode()).hexdigest()
         new_hash = hashlib.sha256(new_password.encode()).hexdigest()
         change_password(username, old_hash, new_hash)
-        return '<div class="alert alert-success">Password changed successfully</div>'
+        return '<div class="alert alert-success">Password changed successfully</div>', 200
     except Exception as e:
         return f'<div class="alert alert-danger">Error: {str(e)}</div>', 500
 

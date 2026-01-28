@@ -22,6 +22,10 @@
                                 <label class="form-label fw-bold">Username</label>
                                 <p class="form-control-plaintext">{{ user.username }}</p>
                             </div>
+                             <div class="col-md-6">
+                                <label class="form-label fw-bold">Card id</label>
+                                <p class="form-control-plaintext">{{ user.card_id }}</p>
+                            </div>
                         </div>
                         
                         <div class="row mb-3">
@@ -35,13 +39,6 @@
                             </div>
                         </div>
                         
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label fw-bold">Card id</label>
-                                <p class="form-control-plaintext">{{ user.card_id }}</p>
-                            </div>
-                        </div>
-                        
                         <!-- Credit Section -->
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -52,13 +49,15 @@
                                             hx-post="/update-credit" 
                                             hx-include="#credit-input"
                                             hx-target="#credit-message"
-                                            hx-swap="innerHTML">
+                                            hx-swap="innerHTML swap:1s"
+                                            hx-on="htmx:responseError: document.getElementById('credit-message').innerHTML = event.detail.xhr.responseText">
                                         Update
                                     </button>
                                 </div>
-                                <div id="credit-message" class="mt-2"></div>
+                                
                             </div>
                         </div>
+                        <div id="credit-message" class="row mb-3"></div>
                     </div>
                     
                     <hr>
@@ -66,7 +65,10 @@
                     <!-- Change Password Section -->
                     <div class="mb-4">
                         <h5 class="mb-3">Change password</h5>
-                        <form hx-post="/change-password" hx-target="#password-message" hx-swap="innerHTML">
+                        <form hx-post="/change-password" 
+                            hx-target="#password-message" 
+                            hx-swap="innerHTML"
+                            hx-on="htmx:responseError: document.getElementById('password-message').innerHTML = event.detail.xhr.responseText">
                             <div class="mb-3">
                                 <label for="current-password" class="form-label">Current password</label>
                                 <input type="password" class="form-control" id="current-password" name="current-password" placeholder="Enter current password" required>
@@ -81,7 +83,7 @@
                             </div>
                             <button class="btn btn-warning" type="submit">Change password</button>
                         </form>
-                        <div id="password-message" class="mt-2"></div>
+                         <div id="password-message" class="mt-2"></div>
                     </div>
                     
                     <div class="text-end">
