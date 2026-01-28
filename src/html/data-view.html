@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Your Account</h2>
+                    
+                    {% if error %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        {{ error }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- User Info Section -->
+                    <div class="mb-4">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Username</label>
+                                <p class="form-control-plaintext">{{ user.username }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Register date</label>
+                                <p class="form-control-plaintext">{{ user.created_at }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Last credit change</label>
+                                <p class="form-control-plaintext">{{ user.updated_at }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Card id</label>
+                                <p class="form-control-plaintext">{{ user.card_id }}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Credit Section -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="credit-input" class="form-label fw-bold">Credit</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" id="credit-input" name="credit-input" value="{{ user.credit }}" step="1">
+                                    <button class="btn btn-primary" type="button" 
+                                            hx-post="/update-credit" 
+                                            hx-include="#credit-input"
+                                            hx-target="#credit-message"
+                                            hx-swap="innerHTML">
+                                        Update
+                                    </button>
+                                </div>
+                                <div id="credit-message" class="mt-2"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <!-- Change Password Section -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Change password</h5>
+                        <form hx-post="/change-password" hx-target="#password-message" hx-swap="innerHTML">
+                            <div class="mb-3">
+                                <label for="current-password" class="form-label">Current password</label>
+                                <input type="password" class="form-control" id="current-password" name="current-password" placeholder="Enter current password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="new-password" class="form-label">New password</label>
+                                <input type="password" class="form-control" id="new-password" name="new-password" placeholder="Enter new password" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="confirm-password" class="form-label">Confirm new password</label>
+                                <input type="password" class="form-control" id="confirm-password" name="confirm-password" placeholder="Confirm new password" required>
+                            </div>
+                            <button class="btn btn-warning" type="submit">Change password</button>
+                        </form>
+                        <div id="password-message" class="mt-2"></div>
+                    </div>
+                    
+                    <div class="text-end">
+                        <a href="/logout" class="btn btn-secondary">Logout</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

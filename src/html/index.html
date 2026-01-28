@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Coffee Tally</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #content-container {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="content-container" class="p-5">
+        <!-- AJAX content will be loaded here -->
+    </div>
+
+    <script>
+        // Load initial content
+        function loadContent(page) {
+            const container = document.getElementById('content-container');
+            
+            // Determine which file to load
+            let url = '';
+            if (page === 'login') {
+                url = '/static/login.html';
+            } else if (page === 'data') {
+                url = '/static/data-view.html';
+            } else {
+                url = '/static/login.html';
+            }
+            
+            // Fetch and load HTML content
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load content');
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    container.innerHTML = html;
+                    // Reinitialize HTMX if needed
+                    if (window.htmx) {
+                        htmx.process(container);
+                    }
+                })
+                .catch(error => {
+                    container.innerHTML = '<p class="text-danger">Error loading content: ' + error.message + '</p>';
+                });
+        }
+
+        // Check if user is logged in on page load
+        fetch('/api/check-auth')
+            .then(response => {
+                if (response.ok) {
+                    loadContent('data');
+                } else {
+                    loadContent('login');
+                }
+            })
+            .catch(error => {
+                loadContent('login');
+            });
+
+        // Global function to switch pages
+        window.switchPage = function(page) {
+            loadContent(page);
+        };
+    </script>
+</body>
+</html>
