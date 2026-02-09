@@ -1,18 +1,12 @@
-from flask import Flask, render_template_string, request, jsonify, redirect, session
+from flask import Flask, render_template, request, redirect, session, make_response
 import hashlib
 from datetime import datetime, timezone
 from token_handler import validate_token, get_username_from_token, create_token
-from db_handler import get_user_data, authenticate_user, update_user_data, change_password
+from db_handler import (get_user_data, authenticate_user, update_user_data, change_password, 
+                        get_user_by_card_id, authenticate_card, setup_user)
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='html', static_folder='html', static_url_path='/static')
 app.secret_key = 'your-secret-key-here'  # Change to a secure key in production
-
-# HTML constants
-HTML_HEAD = '''<head>
-<title>Coffee Tally</title>
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<script src="https://unpkg.com/htmx.org@1.9.10"></script>
-</head>'''
 
 
 def format_datetime(dt):
@@ -32,149 +26,200 @@ def format_datetime(dt):
     return str(dt)
 
 
-def build_user_display_html(result, columns):
-    """Build HTML for user data display with editable credit and password change."""
-    # Map columns to values
-    data = dict(zip(columns, result))
-    
-    created_at = data.get('created_at', '')
-    updated_at = data.get('updated_at', '')
-    card_id = data.get('card_id', '')
-    credit = data.get('credit', 0)
-    
-    created_at_formatted = format_datetime(created_at)
-    updated_at_formatted = format_datetime(updated_at)
-    
-    return f'''
-    <!DOCTYPE html>
-    <html>
-    {HTML_HEAD}
-    <body class="bg-light p-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-md-8">
-                <div class="card shadow">
-                    <div class="card-body">
-                        <h2 class="card-title text-center mb-4">Your Account</h2>
-                        
-                        <!-- User Info Section -->
-                        <div class="mb-4">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Register date</label>
-                                    <p class="form-control-plaintext">{created_at_formatted}</p>
-                                </div>
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Last credit change</label>
-                                    <p class="form-control-plaintext">{updated_at_formatted}</p>
-                                </div>
-                            </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label class="form-label fw-bold">Card id</label>
-                                    <p class="form-control-plaintext">{card_id}</p>
-                                </div>
-                            </div>
-                            
-                            <!-- Credit Section -->
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="credit-input" class="form-label fw-bold">Credit</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" id="credit-input" value="{credit}" step="1">
-                                        <button class="btn btn-primary" type="button" hx-post="/update-credit" hx-include="#credit-input" hx-trigger="click">Update</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <hr>
-                        
-                        <!-- Change Password Section -->
-                        <div class="mb-4">
-                            <h5 class="mb-3">Change password</h5>
-                            <div class="mb-3">
-                                <label for="current-password" class="form-label">Current password</label>
-                                <input type="password" class="form-control" id="current-password" placeholder="Enter current password">
-                            </div>
-                            <div class="mb-3">
-                                <label for="new-password" class="form-label">New password</label>
-                                <input type="password" class="form-control" id="new-password" placeholder="Enter new password">
-                            </div>
-                            <div class="mb-3">
-                                <label for="confirm-password" class="form-label">Confirm new password</label>
-                                <input type="password" class="form-control" id="confirm-password" placeholder="Confirm new password">
-                            </div>
-                            <button class="btn btn-warning" type="button" hx-post="/change-password" hx-include="#current-password,#new-password,#confirm-password" hx-trigger="click">Change password</button>
-                            <div id="password-message" class="mt-2"></div>
-                        </div>
-                        
-                        <button class="btn btn-secondary mt-3 float-end" onclick="window.location.href='/logout'">Logout</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </body>
-    </html>
-    '''
+def is_hex_string(s):
+    """Check if string is a valid hex string."""
+    try:
+        int(s, 16)
+        return True
+    except (ValueError, TypeError):
+        return False
+
+
+# ==================== INDEX & MAIN ROUTES ====================
 
 @app.route('/')
 def route_index():
     token = session.get('token')
-    if token:
-        username = get_username_from_token(token)
-        if username:
+    if token and get_username_from_token(token):
+        return redirect('/data')
+    return redirect('/login')
+
+@app.route('/favicon.ico')
+def favicon():
+    return app.send_static_file('favicon.ico')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    def render_login_error(message, status_code):
+        if is_htmx:
+            return f'<div class="alert alert-danger">{message}</div>', status_code
+        return render_template('login.html', error=message), status_code
+
+    if request.method == 'GET':
+        # Check if already logged in
+        token = session.get('token')
+        if token and get_username_from_token(token):
             return redirect('/data')
+        return render_template('login.html')
     
-    # Show login form
-    return render_template_string(f'''
-    {HTML_HEAD}
-    <body class="bg-light p-5">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <div class="card shadow">
-                        <div class="card-body">
-                            <h2 class="card-title text-center mb-4">Login to Coffee Tally</h2>
-                            <form hx-post="/login" hx-target="#result" hx-swap="innerHTML">
-                                <div class="mb-3">
-                                    <label for="username" class="form-label">Username</label>
-                                    <input type="text" class="form-control" id="username" name="username" required>
-                                    <label for="password" class="form-label">Password</label>
-                                    <input type="password" class="form-control" id="password" name="password" required>
-                                </div>
-                                <button type="submit" class="btn btn-primary w-100">Login</button>
-                            </form>
-                            <div id="result" class="mt-3"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </body>
-    ''')
+    # POST - Handle login
+    username = request.form.get('username')
+    password = request.form.get('password')
+    
+    if not username or not password:
+        return render_login_error('Invalid input', 400)
+    
+    password_hash = hashlib.sha256(password.encode()).hexdigest()
+    
+    try:
+        # Check if username is a hex string (card_id)
+        if is_hex_string(username) and username == password:
+            result, columns = authenticate_card(username)
+            if result:
+                data = dict(zip(columns, result))
+                # If username and password_hash are both NULL, this card needs setup
+                if data.get('username') is None and data.get('password_hash') is None:
+                    session['setup_card_id'] = username
+                    if is_htmx:
+                        response = make_response('', 204)
+                        response.headers['HX-Redirect'] = '/setup'
+                        return response
+                    return redirect('/setup')
+                else:
+                    # Card has been set up, login normally with the stored username
+                    actual_username = data.get('username')
+                    token = create_token(actual_username, expiration_time=3600)
+                    session['token'] = token
+                    if is_htmx:
+                        response = make_response('', 204)
+                        response.headers['HX-Redirect'] = '/data'
+                        return response
+                    return redirect('/data')
+        
+        # Standard username/password authentication
+        result, columns = authenticate_user(username, password_hash)
+        if result:
+            token = create_token(username, expiration_time=3600)  # 1 hour
+            session['token'] = token
+            if is_htmx:
+                response = make_response('', 204)
+                response.headers['HX-Redirect'] = '/data'
+                return response
+            return redirect('/data')
+        else:
+            return render_login_error('Invalid credentials', 401)
+    except Exception as e:
+        return render_login_error(str(e), 500)
+
+
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """Setup page for new users with card_id."""
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    def render_setup_error(message, status_code):
+        if is_htmx:
+            return f'<div class="alert alert-danger">{message}</div>', status_code
+        return render_template('setup.html', card_id=card_id, error=message), status_code
+
+    if request.method == 'GET':
+        card_id = session.get('setup_card_id')
+        if not card_id:
+            return redirect('/login')
+        return render_template('setup.html', card_id=card_id)
+    
+    # POST - Handle setup
+    card_id = session.get('setup_card_id')
+    if not card_id:
+        if is_htmx:
+            return '<div class="alert alert-danger">No card ID in session</div>', 400
+        return render_template('setup.html', error='No card ID in session'), 400
+    
+    username = request.form.get('username')
+    name = request.form.get('name')
+    password = request.form.get('password')
+    confirm_password = request.form.get('confirm-password')
+    
+    if not username or not name or not password or not confirm_password:
+        return render_setup_error('All fields are required', 400)
+    
+    if password != confirm_password:
+        return render_setup_error('Passwords do not match', 400)
+    
+    if len(username) < 3:
+        return render_setup_error('Username must be at least 6 characters', 400)
+    
+    if len(name) < 5:
+        return render_setup_error('Name must be at least 5 characters', 400)
+    
+    if len(password) < 6:
+        return render_setup_error('Password must be at least 6 characters', 400)
+    
+    try:
+        password_hash = hashlib.sha256(password.encode()).hexdigest()
+        setup_user(card_id, username, name, password_hash)
+        
+        # Clear setup session and redirect to login
+        session.pop('setup_card_id', None)
+        if is_htmx:
+            response = make_response('', 204)
+            response.headers['HX-Redirect'] = '/login'
+            return response
+        return redirect('/login')
+    except Exception as e:
+        return render_setup_error(str(e), 500)
+
+
+@app.route('/data')
+def route_data():
+    token = session.get('token')
+    if not token:
+        return redirect('/login')
+    
+    username = get_username_from_token(token)
+    if not username:
+        return redirect('/login')
+    
+    try:
+        result, columns = get_user_data(username)
+        if result:
+            data = dict(zip(columns, result))
+            user_data = {
+                'username': username,
+                'created_at': format_datetime(data.get('created_at', '')),
+                'updated_at': format_datetime(data.get('updated_at', '')),
+                'card_id': data.get('card_id', ''),
+                'credit': data.get('credit', 0)
+            }
+            return render_template('data-view.html', user=user_data)
+        else:
+            return render_template('data-view.html', error='No data found'), 404
+    except Exception as e:
+        return render_template('data-view.html', error=f'Database error: {str(e)}'), 500
+
 
 @app.route('/logout')
 def route_logout():
     session.pop('token', None)
-    return redirect('/')
+    return redirect('/login')
 
+
+# ==================== HTMX ENDPOINTS (Return HTML Fragments) ====================
 
 @app.route('/update-credit', methods=['POST'])
 def update_credit():
+    """HTMX endpoint - updates credit and returns updated display"""
     token = session.get('token')
     if not token:
-        return '<p class="text-danger">Unauthorized</p>', 401
+        return '<div class="alert alert-danger">Unauthorized</div>', 401
     
     username = get_username_from_token(token)
     if not username:
-        return '<p class="text-danger">Unauthorized</p>', 401
+        return '<div class="alert alert-danger">Unauthorized</div>', 401
     
     credit = request.form.get('credit-input')
     if not credit:
-        return '<p class="text-danger">Invalid credit value</p>', 400
+        return '<div class="alert alert-danger">Invalid credit value</div>', 400
     
     try:
         update_data = {
@@ -182,109 +227,41 @@ def update_credit():
             'updated_at': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         }
         update_user_data(username, update_data)
-        return '<p class="text-success">Credit updated successfully</p>'
+        return '<div class="alert alert-success">Credit updated successfully</div>', 200
     except Exception as e:
-        return f'<p class="text-danger">Error: {str(e)}</p>', 500
+        return f'<div class="alert alert-danger">Error: {str(e)}</div>', 500
 
 
 @app.route('/change-password', methods=['POST'])
-def change_pwd():
-    token = session.get('token')
+def change_password_handler():
+    """HTMX endpoint - changes password and returns status message"""
+    token = session.get('token')    
+    
     if not token:
-        return '<p class="text-danger">Unauthorized</p>', 401
+        return '<div class="alert alert-danger">Unauthorized</div>', 401
     
     username = get_username_from_token(token)
     if not username:
-        return '<p class="text-danger">Unauthorized</p>', 401
+        return '<div class="alert alert-danger">Unauthorized</div>', 401
     
     current_password = request.form.get('current-password')
     new_password = request.form.get('new-password')
     confirm_password = request.form.get('confirm-password')
     
     if not current_password or not new_password or not confirm_password:
-        return '<p class="text-danger">All fields are required</p>', 400
+        return '<div class="alert alert-danger">All fields are required</div>', 400
     
-    if new_password != confirm_password:
-        return '<p class="text-danger">New passwords do not match</p>', 400
+    if new_password != confirm_password or len(new_password) < 5:
+        return '<div class="alert alert-danger">New passwords do not match or is too short (at least 5 characters)</div>', 400
     
     try:
         old_hash = hashlib.sha256(current_password.encode()).hexdigest()
         new_hash = hashlib.sha256(new_password.encode()).hexdigest()
         change_password(username, old_hash, new_hash)
-        return '<p class="text-success">Password changed successfully</p>'
+        return '<div class="alert alert-success">Password changed successfully</div>', 200
     except Exception as e:
-        return f'<p class="text-danger">Error: {str(e)}</p>', 500
+        return f'<div class="alert alert-danger">Error: {str(e)}</div>', 500
 
-@app.route('/login', methods=['POST'])
-def login():
-    username = request.form.get('username')
-    password = request.form.get('password')
-    if not username or not password:
-        return jsonify({'error': 'Invalid input'}), 400
-    
-    password_hash = hashlib.sha256(password.encode()).hexdigest()
-    
-    try:
-        result, columns = authenticate_user(username, password_hash)
-        if result:
-            token = create_token(username, expiration_time=3600)  # 1 hour
-            session['token'] = token
-            return redirect('/data')
-        else:
-            return jsonify({'error': 'Invalid credentials'}), 401
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/data', methods=['GET', 'POST', 'PUT'])
-def route_data():
-    if request.method == 'GET':
-        token = session.get('token')
-        if not token:
-            return 'Unauthorized', 401
-        username = get_username_from_token(token)
-        if not username:
-            return 'Unauthorized', 401
-        
-        try:
-            result, columns = get_user_data(username)
-            if result:
-                return build_user_display_html(result, columns)
-            else:
-                return 'No data found', 404
-        except Exception as e:
-            return f'Database error: {str(e)}', 500
-    
-    elif request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
-        if not username or not password:
-            return '<p class="text-danger">Invalid input</p>'
-        
-        password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
-        try:
-            result, columns = authenticate_user(username, password_hash)
-            if result:
-                return build_user_display_html(result, columns)
-            else:
-                return '<p class="text-danger">Invalid credentials</p>'
-        except Exception as e:
-            return f'<p class="text-danger">Database error: {str(e)}</p>'
-    
-    elif request.method == 'PUT':
-        username = validate_token()
-        if not username:
-            return jsonify({'error': 'Unauthorized'}), 401
-        
-        update_data = request.json
-        if not update_data:
-            return jsonify({'error': 'No data provided'}), 400
-        
-        try:
-            update_user_data(username, update_data)
-            return jsonify({'message': 'Updated successfully'})
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
