@@ -3,7 +3,9 @@ import json
 import os
 
 # Load database config
-with open('config.json', 'r') as f:
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+CONFIG_FILE =  'config.json'
+with open(os.path.join(BASEDIR, CONFIG_FILE), 'r') as f:
     config = json.load(f)
 
 db_config = config.get('database', {})
@@ -136,7 +138,7 @@ def change_password(username, old_password_hash, new_password_hash):
         conn.close()
         return True
     except Exception as e:
-        raise Exception(f"Database error: {str(e)}")
+        raise
 
 
 def get_user_by_card_id(card_id):
@@ -163,12 +165,11 @@ def get_user_by_card_id(card_id):
         raise Exception(f"Database error: {str(e)}")
 
 
-def authenticate_card(card_id, password_hash):
+def authenticate_card(card_id):
     """Authenticate user by card_id and password hash.
     
     Args:
         card_id: The card_id to authenticate
-        password_hash: The hashed password to verify
         
     Returns:
         Tuple of (result, columns) where result is the user row if authenticated.
@@ -177,8 +178,8 @@ def authenticate_card(card_id, password_hash):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = f"SELECT * FROM {db_config['table']} WHERE card_id = %s AND password_hash = %s"
-        cursor.execute(query, (card_id, password_hash))
+        query = f"SELECT * FROM {db_config['table']} WHERE card_id = %s AND password_hash IS NULL"
+        cursor.execute(query, (card_id))
         result = cursor.fetchone()
         columns = [desc[0] for desc in cursor.description] if cursor.description else []
         cursor.close()
@@ -188,12 +189,13 @@ def authenticate_card(card_id, password_hash):
         raise Exception(f"Database error: {str(e)}")
 
 
-def setup_user(card_id, username, password_hash):
+def setup_user(card_id, username, name, password_hash):
     """Setup a new user with card_id by setting username and password.
     
     Args:
         card_id: The card_id to set up
         username: The username to set
+        name: The name of the user
         password_hash: The hashed password to set
         
     Returns:
@@ -205,8 +207,8 @@ def setup_user(card_id, username, password_hash):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        query = f"UPDATE {db_config['table']} SET username = %s, password_hash = %s WHERE card_id = %s"
-        cursor.execute(query, (username, password_hash, card_id))
+        query = f"UPDATE {db_config['table']} SET username = %s, name = %s, password_hash = %s WHERE card_id = %s"
+        cursor.execute(query, (username, name, password_hash, card_id))
         conn.commit()
         cursor.close()
         conn.close()
