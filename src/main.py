@@ -145,8 +145,8 @@ def setup():
     if password != confirm_password:
         return render_setup_error('Passwords do not match', 400)
     
-    if len(username) < 3:
-        return render_setup_error('Username must be at least 6 characters', 400)
+    if len(username) != 7:
+        return render_setup_error('Short must be exactly 7 characters', 400)
     
     if len(name) < 5:
         return render_setup_error('Name must be at least 5 characters', 400)
