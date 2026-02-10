@@ -1,12 +1,20 @@
 from flask import Flask, render_template, request, redirect, session, make_response
 import hashlib
+import os
 from datetime import datetime, timezone
 from token_handler import get_username_from_token, create_token
 from db_handler import (get_user_data, authenticate_user, update_user_data, change_password, 
                         authenticate_card, setup_user)
 
 app = Flask(__name__, template_folder='html', static_folder='html', static_url_path='/static')
-app.secret_key = '767322b3-6c32-498a-bdf3-710a12c43e3c'
+secret_key = os.environ.get('FLASK_SECRET_KEY')
+is_dev = os.environ.get('FLASK_ENV') == 'development' or os.environ.get('FLASK_DEBUG') == '1'
+if not secret_key:
+    if is_dev:
+        secret_key = 'dev-only-change-me'
+    else:
+        raise RuntimeError('FLASK_SECRET_KEY is required in non-development environments')
+app.secret_key = secret_key
 
 def format_datetime(dt):
     """Format datetime to UTC SQL format (YYYY-MM-DD HH:MM:SS)."""
