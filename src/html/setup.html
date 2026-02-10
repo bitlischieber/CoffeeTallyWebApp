@@ -22,8 +22,8 @@
                             hx-on="htmx:responseError: document.getElementById('setup-message').innerHTML = event.detail.xhr.responseText">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your username" required autofocus>
-                            <small class="form-text text-muted">At least 6 characters</small>
+                            <input type="text" class="form-control" id="username" name="username" placeholder="Enter your short (e.g. chblub1)" required autofocus>
+                            <small class="form-text text-muted">Exact 7 characters</small>
                         </div>
                         <div class="mb-3">
                             <label for="name" class="form-label">Name (display name)</label>

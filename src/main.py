@@ -1,13 +1,20 @@
 from flask import Flask, render_template, request, redirect, session, make_response
 import hashlib
+import os
 from datetime import datetime, timezone
-from token_handler import validate_token, get_username_from_token, create_token
+from token_handler import get_username_from_token, create_token
 from db_handler import (get_user_data, authenticate_user, update_user_data, change_password, 
-                        get_user_by_card_id, authenticate_card, setup_user)
+                        authenticate_card, setup_user)
 
 app = Flask(__name__, template_folder='html', static_folder='html', static_url_path='/static')
-app.secret_key = 'your-secret-key-here'  # Change to a secure key in production
-
+secret_key = os.environ.get('FLASK_SECRET_KEY')
+is_dev = os.environ.get('FLASK_ENV') == 'development' or os.environ.get('FLASK_DEBUG') == '1'
+if not secret_key:
+    if is_dev:
+        secret_key = 'dev-only-change-me'
+    else:
+        raise RuntimeError('FLASK_SECRET_KEY is required in non-development environments')
+app.secret_key = secret_key
 
 def format_datetime(dt):
     """Format datetime to UTC SQL format (YYYY-MM-DD HH:MM:SS)."""
@@ -146,8 +153,8 @@ def setup():
     if password != confirm_password:
         return render_setup_error('Passwords do not match', 400)
     
-    if len(username) < 3:
-        return render_setup_error('Username must be at least 6 characters', 400)
+    if len(username) != 7:
+        return render_setup_error('Short must be exactly 7 characters', 400)
     
     if len(name) < 5:
         return render_setup_error('Name must be at least 5 characters', 400)

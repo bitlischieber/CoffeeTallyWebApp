@@ -2,11 +2,17 @@ import pymysql
 import json
 import os
 
-# Load database config
+# Load database config (prefer config.json, otherwise use env vars)
 BASEDIR = os.path.abspath(os.path.dirname(__file__))
-CONFIG_FILE =  'config.json'
-with open(os.path.join(BASEDIR, CONFIG_FILE), 'r') as f:
-    config = json.load(f)
+CONFIG_FILE = 'config.json'
+
+config_path = os.path.join(BASEDIR, CONFIG_FILE)
+
+if os.path.exists(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+else:
+    config = {}
 
 db_config = config.get('database', {})
 for key in ['host', 'port', 'user', 'password', 'database', 'table']:
