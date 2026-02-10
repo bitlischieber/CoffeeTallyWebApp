@@ -75,6 +75,8 @@ jobs:
         with:
           app-name: 'vs-coffeetally'
           slot-name: 'Production'
+          package: ./src
 
           
+
 
