@@ -17,7 +17,6 @@ This is the web application for self-managing data for the [CoffeeTally](https:/
 1. Clone the repository
 2. Install environment and dependencies:
     ```bash
-    cd src
     python -m venv venv
     .\venv\Scripts\activate.bat
     pip install --upgrade pip
