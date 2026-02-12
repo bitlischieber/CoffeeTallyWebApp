@@ -1,9 +1,5 @@
 # CoffeeTally Webapp
 
----
-Work in progress. Currently the app is not in stable working state!
----
-
 This is the web application for self-managing data for the [CoffeeTally](https://github.com/bitlischieber/CoffeeTally) project.
 
 ## Setup
