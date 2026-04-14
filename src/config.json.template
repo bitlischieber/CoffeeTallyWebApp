@@ -1,10 +1,19 @@
 {
+  "database_provider": "mysql",
   "database": {
-    "host": "localhost",
-    "port": 3306,
-    "user": "coffeetally_client",
-    "password": "",
-    "database": "coffee_tally",
-    "table": "coffee_tally_users"
+    "mysql": {
+      "host": "localhost",
+      "port": 3306,
+      "user": "coffeetally_client",
+      "password": "",
+      "database": "coffee_tally",
+      "table": "coffee_tally_users"
+    },
+    "cosmos": {
+      "endpoint": "https://your-account.documents.azure.com:443/",
+      "key": "your-cosmos-db-primary-key",
+      "database_name": "coffee_tally",
+      "container_name": "users"
+    }
   }
 }
