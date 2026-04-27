@@ -2,6 +2,7 @@ aiofiles==25.1.0
 aiosqlite==0.22.1
 argcomplete==3.6.3
 asyncua==1.1.8
+azure-cosmos==4.15.0
 bidict==0.23.1
 blinker==1.9.0
 cffi==2.0.0
