@@ -1,4 +1,4 @@
-from azure.cosmos import CosmosClient, PartitionKey, exceptions
+from azure.cosmos import CosmosClient
 import os
 
 
