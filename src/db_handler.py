@@ -8,10 +8,17 @@ import os
 from db_handler_mysql import DatabaseHandler_MySQL
 from db_handler_cosmos import DatabaseHandler_Cosmos
 
+BASEDIR = os.path.abspath(os.path.dirname(__file__))
+CONFIG_FILE = 'config.json'
+
+config_path = os.path.join(BASEDIR, CONFIG_FILE)
 
 # Load database config
-with open('config.json', 'r') as f:
-    config = json.load(f)
+if os.path.exists(config_path):
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+else:
+    config = {}
 
 # Get database provider from environment variable or config
 # Environment variable takes precedence
