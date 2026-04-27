@@ -91,6 +91,8 @@ class DatabaseHandler_MySQL:
             Exception if database error occurs
         """
         try:
+            if not update_data:
+                raise ValueError("update_data must contain at least one field to update")
             set_clause = ', '.join(f"{k} = %s" for k in update_data.keys())
             values = list(update_data.values()) + [username]
             query = f"UPDATE {self.db_config['table']} SET {set_clause} WHERE username = %s"
