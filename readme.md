@@ -1,9 +1,5 @@
 # CoffeeTally Webapp
 
----
-Work in progress. Currently the app is not in stable working state!
----
-
 This is the web application for self-managing data for the [CoffeeTally](https://github.com/bitlischieber/CoffeeTally) project.
 
 ## Features
@@ -30,7 +26,6 @@ This is the web application for self-managing data for the [CoffeeTally](https:/
 1. Clone the repository
 2. Install environment and dependencies:
     ```bash
-    cd src
     python -m venv venv
     .\venv\Scripts\activate.bat
     pip install --upgrade pip
@@ -138,12 +133,18 @@ export COFFEETALLY_PASSWORD=secure_password_here
 # Port, user, database, and table will be read from config.json
 ```
 
+4. Set the Flask secret key (required outside development):
+    - Set `FLASK_SECRET_KEY` to a long random value
+    - Optional for local dev: set `FLASK_ENV=development` to use the dev fallback
+
 ## Running the App
 
 Start the development server:
 ```bash
 cd src
 .\venv\Scripts\activate.bat
+set FLASK_ENV=development
+set FLASK_SECRET_KEY=dev-only-change-me
 flask run
 ```
 
