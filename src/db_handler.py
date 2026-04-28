@@ -98,3 +98,47 @@ def change_password(username, old_password_hash, new_password_hash):
         Exception if old password doesn't match or database error occurs
     """
     return _db_handler.change_password(username, old_password_hash, new_password_hash)
+
+
+def get_user_by_card_id(card_id):
+    """Get user data by card_id.
+    
+    Args:
+        card_id: The card_id to look up
+        
+    Returns:
+        Tuple of (result, columns) where result is the user row and columns is list of column names.
+        Returns (None, []) if user not found or error occurs.
+    """
+    return _db_handler.get_user_by_card_id(card_id)
+
+
+def authenticate_card(card_id):
+    """Authenticate user by card_id and password hash.
+    
+    Args:
+        card_id: The card_id to authenticate
+        
+    Returns:
+        Tuple of (result, columns) where result is the user row if authenticated.
+        Returns (None, []) if authentication fails or error occurs.
+    """
+    return _db_handler.authenticate_card(card_id)
+
+
+def setup_user(card_id, username, name, password_hash):
+    """Setup a new user with card_id by setting username and password.
+    
+    Args:
+        card_id: The card_id to set up
+        username: The username to set
+        name: The name of the user
+        password_hash: The hashed password to set
+        
+    Returns:
+        True if setup was successful
+        
+    Raises:
+        Exception if database error occurs
+    """
+    return _db_handler.setup_user(card_id, username, name, password_hash)

@@ -1,6 +1,5 @@
-import pymysql
 import os
-
+import pymysql
 
 class DatabaseHandler_MySQL:
     """MySQL database handler for CoffeeTally application."""
@@ -136,6 +135,80 @@ class DatabaseHandler_MySQL:
             # Update password
             query = f"UPDATE {self.db_config['table']} SET password_hash = %s WHERE username = %s"
             cursor.execute(query, (new_password_hash, username))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return True
+        except Exception as e:
+            raise Exception(f"Database error: {str(e)}")
+
+    def get_user_by_card_id(self, card_id):
+        """Get user data by card_id.
+        
+        Args:
+            card_id: The card_id to look up
+            
+        Returns:
+            Tuple of (result, columns) where result is the user row and columns is list of column names.
+            Returns (None, []) if user not found or error occurs.
+        """
+        try:
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            query = f"SELECT * FROM {self.db_config['table']} WHERE card_id = %s"
+            cursor.execute(query, (card_id,))
+            result = cursor.fetchone()
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            cursor.close()
+            conn.close()
+            return result, columns
+        except Exception as e:
+            raise Exception(f"Database error: {str(e)}")
+
+
+    def authenticate_card(self, card_id):
+        """Authenticate user by card_id and password hash.
+        
+        Args:
+            card_id: The card_id to authenticate
+            
+        Returns:
+            Tuple of (result, columns) where result is the user row if authenticated.
+            Returns (None, []) if authentication fails or error occurs.
+        """
+        try:
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            query = f"SELECT * FROM {self.db_config['table']} WHERE card_id = %s AND password_hash IS NULL"
+            cursor.execute(query, (card_id,))
+            result = cursor.fetchone()
+            columns = [desc[0] for desc in cursor.description] if cursor.description else []
+            cursor.close()
+            conn.close()
+            return result, columns
+        except Exception as e:
+            raise Exception(f"Database error: {str(e)}")
+    
+    def setup_user(self, card_id, username, name, password_hash):
+        """Setup a new user with card_id by setting username and password.
+        
+        Args:
+            card_id: The card_id to set up
+            username: The username to set
+            name: The name of the user
+            password_hash: The hashed password to set
+            
+        Returns:
+            True if setup was successful
+            
+        Raises:
+            Exception if database error occurs
+        """
+        try:
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            query = f"UPDATE {self.db_config['table']} SET username = %s, name = %s, password_hash = %s WHERE card_id = %s"
+            cursor.execute(query, (username, name, password_hash, card_id))
             conn.commit()
             cursor.close()
             conn.close()
